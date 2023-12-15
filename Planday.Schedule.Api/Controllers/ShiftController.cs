@@ -35,6 +35,25 @@ namespace Planday.Schedule.Api.Controllers
 
             return Ok(entity);
         }
+
+        [HttpPost]
+        public async Task<ActionResult<Shift>> CreateOpenShift([FromRoute] Shift shift)
+        {
+
+            if (shift.Start > shift.End)
+            {
+                return BadRequest("Start time cannot be greater than end time.");
+            }
+
+            if (shift.Start.Date != shift.End.Date)
+            {
+                return BadRequest("Start and end time should be on the same day.");
+            }
+
+            var entity = await _connection.CreateOpenShift(shift);
+
+            return Ok(entity);
+        }
     }
 }
 

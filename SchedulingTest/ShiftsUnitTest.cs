@@ -86,7 +86,7 @@ namespace SchedulingTest
         [Fact]
         public async Task GetShiftById_ShouldReturnNotFound_True()
         {
-            long shiftId = 3;
+            long shiftId = long.MaxValue;
             int notFoundCode = 404;
             var result = await _controller.GetShiftById(shiftId);
 
@@ -97,6 +97,87 @@ namespace SchedulingTest
         }
         [Fact]
         public async Task GetShiftById_BadRequest_True()
+        {
+            long shiftId = -1;
+            int badRequestCode = 400;
+            var result = await _controller.GetShiftById(shiftId);
+
+            var actionResult = Assert.IsType<ActionResult<Shift>>(result);
+            var badRequest = actionResult.Result as BadRequestObjectResult;
+
+            Assert.NotNull(badRequest);
+            Assert.Equal(badRequestCode, badRequest.StatusCode);
+        }
+
+        [Fact]
+        public async Task CreateOpenShift_Ok_True()
+        {
+            DateTime start = new DateTime(2023, 12, 23, 9, 0, 0);
+            DateTime end = new DateTime(2023, 12, 23, 17, 0, 0);
+            Shift shift = new Shift(0, null, start, end);
+            var result = await _controller.CreateOpenShift(shift);
+
+            var actionResult = Assert.IsType<ActionResult<Shift>>(result);
+            var okResult = actionResult.Result as OkObjectResult;
+
+            Assert.NotNull(okResult);
+            var actual = Assert.IsAssignableFrom<Shift>(okResult.Value);
+            Assert.Equal(start, actual.Start);
+            Assert.Equal(end, actual.End);
+        }
+
+        [Fact]
+        public async Task CreateOpenShift_NotSameDay_True()
+        {
+            int badRequestCode = 400;
+            DateTime start = new DateTime(2023, 12, 23, 9, 0, 0);
+            DateTime end = new DateTime(2023, 12, 24, 17, 0, 0);
+            Shift shift = new Shift(0, null, start, end);
+            var result = await _controller.CreateOpenShift(shift);
+
+            var actionResult = Assert.IsType<ActionResult<Shift>>(result);
+            var badRequest = actionResult.Result as BadRequestObjectResult;
+
+            Assert.NotNull(badRequest);
+            Assert.Equal(badRequestCode, badRequest.StatusCode);
+            Assert.Equal("Start and end time should be on the same day.", badRequest.Value);
+        }
+
+        [Fact]
+        public async Task CreateOpenShift_StartDateIsGreaterThanEndDate_True()
+        {
+            int badRequestCode = 400;
+            DateTime start = new DateTime(2023, 12, 24, 13, 0, 0);
+            DateTime end = new DateTime(2023, 12, 24, 9, 0, 0);
+            Shift shift = new Shift(0, null, start, end);
+            var result = await _controller.CreateOpenShift(shift);
+
+            var actionResult = Assert.IsType<ActionResult<Shift>>(result);
+            var badRequest = actionResult.Result as BadRequestObjectResult;
+
+            Assert.NotNull(badRequest);
+            Assert.Equal(badRequestCode, badRequest.StatusCode);
+            Assert.Equal("Start time cannot be greater than end time.", badRequest.Value);
+        }
+
+
+
+        [Fact]
+        public async Task CreateOpenShift_ShouldReturnBadRequest_StartDateGreaterThanEndDate()
+        {
+            long shiftId = -1;
+            int badRequestCode = 400;
+            var result = await _controller.GetShiftById(shiftId);
+
+            var actionResult = Assert.IsType<ActionResult<Shift>>(result);
+            var badRequest = actionResult.Result as BadRequestObjectResult;
+
+            Assert.NotNull(badRequest);
+            Assert.Equal(badRequestCode, badRequest.StatusCode);
+        }
+
+        [Fact]
+        public async Task CreateOpenShift_ShouldReturnBadRequest_NotSameDay()
         {
             long shiftId = -1;
             int badRequestCode = 400;

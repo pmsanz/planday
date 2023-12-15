@@ -10,7 +10,9 @@ namespace Planday.Schedule.Infrastructure.Queries
         private readonly IConnectionStringProvider _connectionStringProvider;
 
         private const string SqlGetAllShifts = @"SELECT Id, EmployeeId, Start, End FROM Shift;";
-        private string SqlGetShiftById = @"SELECT Id, EmployeeId, Start, End FROM Shift WHERE Id = {0};";
+        private const string SqlGetShiftById = @"SELECT Id, EmployeeId, Start, End FROM Shift WHERE Id = {0};";
+        private const string SqlCreateOpenShift = @"INSERT INTO Shift (EmployeeId, Start, End) VALUES (-1, '{0}', '{1}');";
+        private const string SqlGetLastInsert = @"SELECT * FROM Shift ORDER BY Id DESC LIMIT 1;";
         private record ShiftDto(long Id, long? EmployeeId, string Start, string End);
 
         public ShiftsQuery(IConnectionStringProvider connectionStringProvider)
@@ -33,14 +35,28 @@ namespace Planday.Schedule.Infrastructure.Queries
         public async Task<Shift?> GetShiftById(long id)
         {
             await using var sqlConnection = new SqliteConnection(_connectionStringProvider.GetConnectionString());
-            SqlGetShiftById = string.Format(SqlGetShiftById, id);
+            string SqlGetShiftByIdFormated = string.Format(SqlGetShiftById, id);
 
-            var shiftDtos = await sqlConnection.QueryAsync<ShiftDto>(SqlGetShiftById);
+            var shiftDtos = await sqlConnection.QueryAsync<ShiftDto>(SqlGetShiftByIdFormated);
 
             var shifts = shiftDtos.Select(x =>
                 new Shift(x.Id, x.EmployeeId, DateTime.Parse(x.Start), DateTime.Parse(x.End)));
 
             return shifts.FirstOrDefault();
+        }
+
+        public async Task<Shift> CreateOpenShift(Shift openShift)
+        {
+            await using var sqlConnection = new SqliteConnection(_connectionStringProvider.GetConnectionString());
+            string insertSql = string.Format(SqlCreateOpenShift, openShift.Start.ToString("yyyy-MM-dd HH:mm:ss.fff"), openShift.End.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            await sqlConnection.ExecuteAsync(insertSql);
+
+            var shiftDto = await sqlConnection.QueryFirstAsync<ShiftDto>(SqlGetLastInsert);
+
+            if (shiftDto != null)
+                return new Shift(shiftDto.Id, shiftDto.EmployeeId, DateTime.Parse(shiftDto.Start), DateTime.Parse(shiftDto.End));
+            else
+                throw new Exception("Error getting Last shift inserted.");
         }
     }
 }
