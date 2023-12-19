@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Planday.Schedule
+﻿namespace Planday.Schedule
 {
     public class Shift
     {
@@ -14,8 +12,10 @@ namespace Planday.Schedule
 
         public long Id { get; }
         public long? EmployeeId { get; }
+        public string EmployeeEmail { get; set; }
         public DateTime Start { get; }
         public DateTime End { get; }
-    }    
+
+    }
 }
 
