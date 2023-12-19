@@ -1,44 +1,36 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using Planday.Schedule;
 using Planday.Schedule.Api.Controllers;
-using Planday.Schedule.Infrastructure.Providers.Interfaces;
 using Planday.Schedule.Infrastructure.Queries;
 
 namespace SchedulingTest
 {
-    public class FakeConnectionProvider : IConnectionStringProvider
-    {
-        public FakeConnectionProvider()
-        {
-
-        }
-        public string GetConnectionString()
-        {
-            string currentDirectory = Directory.GetCurrentDirectory();
-            string dbName = "planday-schedule.db";
-            string connectionString = string.Format("Data Source={0};", Path.Combine(currentDirectory, dbName));
-            return connectionString;
-        }
-    }
-
-    public class ShiftsUnitTest
+    public class ShiftUnitTest : BaseUnitTest
     {
         private ShiftController _controller;
         private List<Shift> _expectedShifts = new List<Shift>();
-        public ShiftsUnitTest()
+
+        public ShiftUnitTest()
         {
-            FakeConnectionProvider fake = new FakeConnectionProvider();
-            var mockRepo = new Mock<ShiftsQuery>(fake);
-            _controller = new ShiftController(mockRepo.Object);
+            var mockRepo = new Mock<ShiftsQuery>(_fakeConnectionProvider);
+            var configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .Build();
+            _controller = new ShiftController(mockRepo.Object, configuration);
 
             _expectedShifts.Add(new Shift(id: 1, 1, new DateTime(2022, 6, 17, 12, 0, 0), new DateTime(2022, 6, 17, 17, 0, 0)));
             _expectedShifts.Add(new Shift(id: 2, 2, new DateTime(2022, 6, 17, 9, 0, 0), new DateTime(2022, 6, 17, 15, 0, 0)));
+            _expectedShifts.Add(new Shift(id: 3, -1, new DateTime(2023, 12, 23, 9, 0, 0), new DateTime(2023, 12, 23, 17, 0, 0)));
+            _expectedShifts.Add(new Shift(id: 4, -1, new DateTime(2023, 12, 23, 17, 0, 0), new DateTime(2023, 12, 24, 9, 0, 0)));
+            _expectedShifts.Add(new Shift(id: 5, -1, new DateTime(2022, 6, 17, 12, 0, 0), new DateTime(2022, 6, 17, 17, 0, 0)));
         }
 
         [Fact]
         public async Task GetAllShifts_ShouldReturnListReadOnly_True()
         {
+            RestoreTestingBD();
             var result = await _controller.GetAllShifts();
 
             var actionResult = Assert.IsType<ActionResult<IReadOnlyCollection<Shift>>>(result);
@@ -65,6 +57,7 @@ namespace SchedulingTest
             Assert.Equal(_expectedShifts.ElementAt(0).EmployeeId, actual.EmployeeId);
             Assert.Equal(_expectedShifts.ElementAt(0).Start, actual.Start);
             Assert.Equal(_expectedShifts.ElementAt(0).End, actual.End);
+            Assert.Equal("john@doe.com", actual.EmployeeEmail);
         }
         [Fact]
         public async Task GetShiftById_ShouldReturnId2_True()
@@ -82,7 +75,37 @@ namespace SchedulingTest
             Assert.Equal(_expectedShifts.ElementAt(1).EmployeeId, actual.EmployeeId);
             Assert.Equal(_expectedShifts.ElementAt(1).Start, actual.Start);
             Assert.Equal(_expectedShifts.ElementAt(1).End, actual.End);
+            Assert.Equal("jane@doe.com", actual.EmployeeEmail);
+
         }
+
+        [Fact]
+        public async Task GetExternalEmployeeByExternalAPI_ShouldReturnId2_True()
+        {
+            long shiftId = 2;
+            var result = await _controller.GetExternalEmployeeByExternalAPI(shiftId);
+
+            var externalEmployee = Assert.IsType<ExternalEmployee>(result);
+            var actual = externalEmployee as ExternalEmployee;
+
+            Assert.NotNull(actual);
+            Assert.Equal("jane@doe.com", actual.Email);
+            Assert.Equal("Jane Doe", actual.Name);
+
+        }
+
+        [Fact]
+        public async Task GetExternalEmployeeApiByExternalAPI_WhenBadRequestResponse_ShouldThrowHttpRequestException_WithExpectedMessage()
+        {
+            long shiftId = 3;
+
+            var exception = await Assert.ThrowsAsync<Exception>(() => _controller.GetExternalEmployeeByExternalAPI(shiftId));
+            Assert.NotNull(exception);
+            Assert.Contains("Error getting data from external API", exception.Message);
+
+
+        }
+
         [Fact]
         public async Task GetShiftById_ShouldReturnNotFound_True()
         {
@@ -107,6 +130,20 @@ namespace SchedulingTest
 
             Assert.NotNull(badRequest);
             Assert.Equal(badRequestCode, badRequest.StatusCode);
+        }
+
+        [Fact]
+        public async Task GetShiftsByEmployeeId_ShouldReturnListReadOnly_True()
+        {
+            long employeeId = 1;
+            var result = await _controller.GetAllShiftsByEmployeeId(employeeId);
+
+            var actionResult = Assert.IsType<ActionResult<IReadOnlyCollection<Shift>>>(result);
+            var okResult = actionResult.Result as OkObjectResult;
+
+            Assert.NotNull(okResult);
+            var model = Assert.IsAssignableFrom<IReadOnlyCollection<Shift>>(okResult.Value);
+            AssertShiftCollectionsAreEqual(_expectedShifts.Where(x => x.EmployeeId == employeeId).ToList(), model);
         }
 
         [Fact]
