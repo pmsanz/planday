@@ -10,6 +10,12 @@
 
         public long Id { get; }
         public string Name { get; }
-    }    
+    }
+
+    public class ExternalEmployee
+    {
+        public string Name { get; set; }
+        public string Email { get; set; }
+    }
 }
 
