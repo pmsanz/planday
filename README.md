@@ -1,3 +1,6 @@
+## Recomendations
+As recomendation, I can suggest to the technical team that they consider incorporating an ORM like Entity Framework for the use of SQL Lite, which would enable them to focus on a Code First approach to the solution. Additionally, as an advantage, this would allow all the queries, currently represented as strings, to be in code format and updated in the repository.
+
 # Scheduling API Code Challenge
 
 Welcome to the Scheduling API Code Challenge. This challenge will help us understand your approach as a software developer. It is divided into four tasks of increasing complexity. You are not required to complete all tasks, but please complete as many as you can. The challenge centers around a Scheduling API that allows you to manage employee shifts.
