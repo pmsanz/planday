@@ -30,6 +30,10 @@ Task 1: Query a Shift
 
 For Task 2, add an endpoint and the necessary services to create an open shift. An open shift is a shift without an employee assigned to it.
 
+# Important clarification
+
+The database was updated with an default employee. To be able to set the default EmployeeId for open shifts as -1. All validations are now handled in the controller, not as part of the database constraints.
+
 **Acceptance criteria:**
 
 - The endpoint creates a shift without an employee assigned to it.
